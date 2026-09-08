@@ -1,4 +1,4 @@
-﻿param([switch]$SmokeTest, [string]$TestFolder, [string]$RenderPath)
+﻿param([switch]$SmokeTest, [string]$TestFolder, [string]$RenderPath, [int]$RenderTab=0)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
 $appRoot = $PSScriptRoot
@@ -7,165 +7,141 @@ $bundledPython = Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary
 $venvPython = Join-Path $appRoot '.venv\Scripts\python.exe'
 $workerPython = if (Test-Path -LiteralPath $venvPython) { $venvPython } elseif (Test-Path -LiteralPath $bundledPython) { $bundledPython } else { (Get-Command python -ErrorAction Stop).Source }
 [xml]$markup = @'
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Prefab Drop" Width="760" Height="780" MinWidth="620" MinHeight="740" WindowStartupLocation="CenterScreen" Background="#F5F5F0" FontFamily="Segoe UI" Foreground="#25332D">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Prefab Drop" Width="780" Height="900" MinWidth="660" MinHeight="820" WindowStartupLocation="CenterScreen" Background="#F5F5F0" FontFamily="Segoe UI" Foreground="#25332D">
  <Window.Resources>
-  <Style TargetType="Button">
-   <Setter Property="Background" Value="#E7EBE3"/><Setter Property="Foreground" Value="#25332D"/><Setter Property="Padding" Value="16,10"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="13"/>
-   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="7" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="B" Property="Opacity" Value="0.8"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="B" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
-  </Style>
-  <Style TargetType="TextBox"><Setter Property="Padding" Value="10,8"/><Setter Property="BorderBrush" Value="#D7DED3"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Background" Value="White"/></Style>
-  <Style TargetType="ComboBox"><Setter Property="Padding" Value="8,7"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+  <Style TargetType="Button"><Setter Property="Background" Value="#E2E9DC"/><Setter Property="Padding" Value="15,9"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="13"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="B" Background="{TemplateBinding Background}" CornerRadius="7" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="B" Property="Opacity" Value="0.75"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+  <Style TargetType="TextBox"><Setter Property="Padding" Value="9,7"/><Setter Property="BorderBrush" Value="#D7DED3"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+  <Style TargetType="ComboBox"><Setter Property="Padding" Value="8,7"/></Style>
+  <Style TargetType="TabItem"><Setter Property="Padding" Value="20,10"/><Setter Property="FontSize" Value="14"/></Style>
  </Window.Resources>
- <Grid Margin="32,26">
-  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <Grid Margin="0,0,0,24">
-   <StackPanel><TextBlock Text="PREFAB DROP" FontSize="12" FontWeight="SemiBold" Foreground="#63755F"/><TextBlock Text="Image in. Brushes out." FontSize="28" FontWeight="SemiBold" Margin="0,7,0,4"/><TextBlock Text="Drop a silhouette. Save it straight to your map source folder." FontSize="13" Foreground="#69736B"/></StackPanel>
-   <Border HorizontalAlignment="Right" VerticalAlignment="Top" Background="#E7EBE3" Padding="10,5" CornerRadius="12"><TextBlock Text="COD4 / IW3XO" FontSize="10" FontWeight="SemiBold"/></Border>
-  </Grid>
-  <StackPanel Grid.Row="1" Margin="0,0,0,20"><TextBlock Text="PREFAB FOLDER" FontSize="11" FontWeight="SemiBold" Foreground="#63755F" Margin="0,0,0,8"/>
-   <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="Folder" ToolTip="Choose or paste the folder where .map prefabs should be saved" AutomationProperties.Name="Prefab destination folder"/><Button x:Name="Browse" Grid.Column="1" Content="Choose folder" Margin="10,0,0,0"/></Grid>
-  </StackPanel>
-  <Border x:Name="DropZone" Grid.Row="2" Background="#EAEFE5" BorderBrush="#BBCAB4" BorderThickness="1" CornerRadius="12" AllowDrop="True" MinHeight="180" Margin="0,0,0,18">
-   <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24"><TextBlock Text="⬡" FontSize="36" HorizontalAlignment="Center" Foreground="#758C68" Margin="0,0,0,5"/><TextBlock x:Name="DropTitle" Text="Drop images here" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Text="PNG, JPG, WEBP, BMP or TIFF" FontSize="12" Foreground="#69736B" HorizontalAlignment="Center" Margin="0,7,0,14"/><Button x:Name="ChooseImages" Content="or choose images" Background="#DCE5D5" HorizontalAlignment="Center"/></StackPanel>
-  </Border>
-  <StackPanel Grid.Row="3" Margin="0,0,0,18">
-   <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-    <StackPanel><TextBlock Text="Solid area" FontSize="12" Margin="0,0,0,6"/><ComboBox x:Name="Mask" SelectedIndex="0"><ComboBoxItem Content="Dark pixels" Tag="dark"/><ComboBoxItem Content="Light pixels" Tag="light"/><ComboBoxItem Content="PNG transparency" Tag="alpha"/></ComboBox></StackPanel>
-    <StackPanel Grid.Column="2"><TextBlock Text="Depth · units" FontSize="12" Margin="0,0,0,6"/><TextBox x:Name="Depth" Text="32" AutomationProperties.Name="Extrusion depth in units"/></StackPanel>
-    <StackPanel Grid.Column="4"><TextBlock Text="Orientation" FontSize="12" Margin="0,0,0,6"/><ComboBox x:Name="Orientation" SelectedIndex="0"><ComboBoxItem Content="Floor" Tag="floor"/><ComboBoxItem Content="Wall" Tag="wall"/></ComboBox></StackPanel>
-   </Grid>
-   <Expander Header="Size and detail" Margin="0,14,0,0" Foreground="#63755F"><Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-    <StackPanel><TextBlock Text="Longest edge · cells" FontSize="12" Margin="0,0,0,6"/><TextBox x:Name="Resolution" Text="96"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="Units per cell" FontSize="12" Margin="0,0,0,6"/><TextBox x:Name="Cell" Text="4"/></StackPanel><StackPanel Grid.Column="4"><TextBlock Text="Threshold · 0–255" FontSize="12" Margin="0,0,0,6"/><TextBox x:Name="Threshold" Text="128"/></StackPanel>
-   </Grid></Expander>
-  </StackPanel>
-  <Border Grid.Row="4" BorderBrush="#DDE3D8" BorderThickness="0,1,0,0" Padding="0,14,0,0"><StackPanel><TextBlock x:Name="Status" Text="Choose a folder to get started." FontSize="13" TextWrapping="Wrap"/>
-   <ListBox x:Name="Results" Background="Transparent" BorderThickness="0" MaxHeight="90" Margin="0,8,0,0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Margin="0,3"/></DataTemplate></ListBox.ItemTemplate></ListBox>
+ <Grid Margin="30,24"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <StackPanel Margin="0,0,0,20"><TextBlock Text="PREFAB DROP" FontSize="12" Foreground="#63755F" FontWeight="SemiBold"/><TextBlock Text="Images into Radiant." FontSize="28" FontWeight="SemiBold" Margin="0,5,0,4"/><TextBlock Text="Brush prefabs and custom materials, in one place." Foreground="#69736B"/></StackPanel>
+  <StackPanel Grid.Row="1" Margin="0,0,0,18"><TextBlock Text="COD4 MOD TOOLS FOLDER" Foreground="#63755F" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,7"/><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="Game" AutomationProperties.Name="CoD4 installation folder"/><Button x:Name="BrowseGame" Grid.Column="1" Content="Choose folder" Margin="10,0,0,0"/></Grid></StackPanel>
+  <TabControl x:Name="Tabs" Grid.Row="2" Background="Transparent" BorderThickness="0">
+   <TabItem Header="Prefabs"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,18,0,0">
+    <TextBlock Text="PREFAB DESTINATION" FontSize="11" Foreground="#63755F" Margin="0,0,0,7"/><Grid Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="Folder" AutomationProperties.Name="Prefab destination folder"/><Button x:Name="Browse" Grid.Column="1" Content="Choose folder" Margin="10,0,0,0"/></Grid>
+    <Border x:Name="DropZone" Background="#EAEFE5" BorderBrush="#BBCAB4" BorderThickness="1" CornerRadius="12" AllowDrop="True" Padding="24"><StackPanel HorizontalAlignment="Center"><TextBlock Text="⬡" Foreground="#758C68" FontSize="32" HorizontalAlignment="Center"/><TextBlock Text="Drop images here" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,6"/><TextBlock Text="Create .map prefabs from silhouettes" Foreground="#69736B" HorizontalAlignment="Center"/><Button x:Name="ChooseImages" Content="or choose images" Margin="0,14,0,0" HorizontalAlignment="Center"/></StackPanel></Border>
+    <CheckBox x:Name="AutoTexture" IsChecked="True" Content="Automatically convert and apply the image as a texture" Margin="0,16,0,7"/>
+    <TextBlock Text="Image fitted across front/back faces · tiled edges" FontSize="11" Foreground="#69736B" Margin="20,0,0,16"/>
+    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <StackPanel><TextBlock Text="Solid area" Margin="0,0,0,5"/><ComboBox x:Name="Mask" SelectedIndex="0"><ComboBoxItem Content="Dark pixels" Tag="dark"/><ComboBoxItem Content="Light pixels" Tag="light"/><ComboBoxItem Content="PNG transparency" Tag="alpha"/></ComboBox></StackPanel>
+     <StackPanel Grid.Column="2"><TextBlock Text="Depth · units" Margin="0,0,0,5"/><TextBox x:Name="Depth" Text="32"/></StackPanel>
+     <StackPanel Grid.Column="4"><TextBlock Text="Orientation" Margin="0,0,0,5"/><ComboBox x:Name="Orientation" SelectedIndex="0"><ComboBoxItem Content="Floor" Tag="floor"/><ComboBoxItem Content="Wall" Tag="wall"/></ComboBox></StackPanel>
+    </Grid>
+    <Expander Header="Size and detail" Margin="0,14,0,0"><Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Longest edge · cells"/><TextBox x:Name="Resolution" Text="96"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Text="Units per cell"/><TextBox x:Name="Cell" Text="4"/></StackPanel><StackPanel Grid.Column="4"><TextBlock Text="Threshold · 0–255"/><TextBox x:Name="Threshold" Text="128"/></StackPanel></Grid></Expander>
+    <Button x:Name="OpenFolder" Content="Open prefab folder ↗" HorizontalAlignment="Right" Background="Transparent" Margin="0,12,0,0"/>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="Single texture"><StackPanel Margin="0,24,0,0">
+    <TextBlock Text="Add a texture to Radiant" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="Import one image as a world material. No prefab is created." TextWrapping="Wrap" Foreground="#69736B" Margin="0,7,0,22"/>
+    <TextBlock Text="Material label (optional)" Margin="0,0,0,7"/><TextBox x:Name="MaterialName" ToolTip="The final name includes pd_ and a content hash to avoid collisions." Margin="0,0,0,18"/>
+    <Border x:Name="TextureDrop" Background="#EAEFE5" BorderBrush="#BBCAB4" BorderThickness="1" CornerRadius="12" AllowDrop="True" Padding="30"><StackPanel HorizontalAlignment="Center"><TextBlock Text="Drop one texture image" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock Text="PNG, JPG, WEBP, BMP or TIFF" Foreground="#69736B" HorizontalAlignment="Center" Margin="0,8,0,16"/><Button x:Name="ChooseTexture" Content="Choose image and import" HorizontalAlignment="Center"/></StackPanel></Border>
+    <TextBlock Text="Creates an opaque metal material. Transparent pixels use a dark background. Images are resized to power-of-two dimensions, up to 1024 pixels per axis." Foreground="#69736B" TextWrapping="Wrap" Margin="0,18,0,12"/>
+    <TextBlock Text="After import, reload textures or restart Radiant and search for the material name shown below." TextWrapping="Wrap" Foreground="#69736B"/>
+   </StackPanel></TabItem>
+  </TabControl>
+  <Border Grid.Row="3" BorderBrush="#DDE3D8" BorderThickness="0,1,0,0" Padding="0,14,0,0" Margin="0,18,0,0"><StackPanel><TextBlock x:Name="Status" Text="Ready. Choose your folders, then drop an image." TextWrapping="Wrap"/>
+   <ListBox x:Name="Results" MaxHeight="90" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Margin="0,5"/></DataTemplate></ListBox.ItemTemplate></ListBox>
+   <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0"><Button x:Name="CopyMaterial" Content="Copy material name" Background="Transparent"/><Button x:Name="OpenLogs" Content="Conversion logs ↗" Background="Transparent"/></StackPanel>
   </StackPanel></Border>
-  <Grid Grid.Row="5" Margin="0,14,0,0"><TextBlock Text="Grid-based brushes · caulk material" FontSize="11" Foreground="#7C877D" VerticalAlignment="Center"/><Button x:Name="OpenFolder" Content="Open prefab folder ↗" HorizontalAlignment="Right" Padding="10,7" Background="Transparent"/></Grid>
  </Grid>
 </Window>
 '@
 $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $markup))
 $ui = @{}
-foreach ($name in @('Folder','Browse','DropZone','DropTitle','ChooseImages','Mask','Depth','Orientation','Resolution','Cell','Threshold','Status','Results','OpenFolder')) { $ui[$name] = $window.FindName($name) }
-$state = @{ Queue = New-Object System.Collections.Queue; Process = $null; Job = $null; Temp = $null; Done = 0; Failed = 0 }
+foreach ($name in @('Game','BrowseGame','Tabs','Folder','Browse','DropZone','ChooseImages','AutoTexture','Mask','Depth','Orientation','Resolution','Cell','Threshold','OpenFolder','MaterialName','TextureDrop','ChooseTexture','Status','Results','CopyMaterial','OpenLogs')) { $ui[$name] = $window.FindName($name) }
+$ui.Game.Text = 'C:\Code\Cod4\Call of Duty 4'
+$state = @{ Queue=New-Object System.Collections.Queue; Process=$null; Job=$null; Request=$null; Response=$null; Done=0; Failed=0; Material='' }
 function Save-Preferences {
-    if ($SmokeTest) { return }
-    try { @{ folder=$ui.Folder.Text; depth=$ui.Depth.Text; resolution=$ui.Resolution.Text; cell=$ui.Cell.Text; threshold=$ui.Threshold.Text; mask=$ui.Mask.SelectedIndex; orientation=$ui.Orientation.SelectedIndex } | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8 }
-    catch { $ui.Status.Text = 'Could not remember settings. Conversion is still available.' }
+ if ($SmokeTest) { return }
+ try { @{game=$ui.Game.Text; folder=$ui.Folder.Text; auto_texture=[bool]$ui.AutoTexture.IsChecked; depth=$ui.Depth.Text; resolution=$ui.Resolution.Text; cell=$ui.Cell.Text; threshold=$ui.Threshold.Text; mask=$ui.Mask.SelectedIndex; orientation=$ui.Orientation.SelectedIndex} | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8 } catch { $ui.Status.Text='Could not remember settings.' }
 }
 if ((Test-Path -LiteralPath $settingsFile) -and -not $SmokeTest) {
-    try {
-        $saved = Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
-        $ui.Folder.Text = [string]$saved.folder
-        foreach ($pair in @(@('Depth','depth'),@('Resolution','resolution'),@('Cell','cell'),@('Threshold','threshold'))) { if ($null -ne $saved.($pair[1])) { $ui[$pair[0]].Text = [string]$saved.($pair[1]) } }
-        if ($saved.mask -in 0,1,2) { $ui.Mask.SelectedIndex = $saved.mask }; if ($saved.orientation -in 0,1) { $ui.Orientation.SelectedIndex = $saved.orientation }
-        $ui.Status.Text = 'Ready. Drop images to convert and save.'
-    } catch { }
+ try { $saved=Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
+  foreach ($pair in @(@('Game','game'),@('Folder','folder'),@('Depth','depth'),@('Resolution','resolution'),@('Cell','cell'),@('Threshold','threshold'))) { if ($null -ne $saved.($pair[1])) { $ui[$pair[0]].Text=[string]$saved.($pair[1]) } }
+  if ($saved.mask -in 0,1,2) { $ui.Mask.SelectedIndex=$saved.mask }; if ($saved.orientation -in 0,1) { $ui.Orientation.SelectedIndex=$saved.orientation }; if ($null -ne $saved.auto_texture) { $ui.AutoTexture.IsChecked=[bool]$saved.auto_texture }
+ } catch { }
 }
-function Add-Images([string[]]$paths) {
-    try {
-        $folder = $ui.Folder.Text.Trim().Trim('"')
-        if (-not (Test-Path -LiteralPath $folder -PathType Container)) { throw 'Choose an existing prefab folder first.' }
-        $folder = (Get-Item -LiteralPath $folder).FullName
-        $culture = [Globalization.CultureInfo]::InvariantCulture
-        $depth = [double]::Parse($ui.Depth.Text, $culture); $cell = [double]::Parse($ui.Cell.Text, $culture)
-        $resolution = [int]::Parse($ui.Resolution.Text, $culture); $threshold = [int]::Parse($ui.Threshold.Text, $culture)
-        if ([double]::IsNaN($depth) -or [double]::IsInfinity($depth) -or $depth -lt 0.125 -or $depth -gt 8192) { throw 'Depth must be between 0.125 and 8192 units.' }
-        if ([double]::IsNaN($cell) -or [double]::IsInfinity($cell) -or $cell -lt 0.125 -or $cell -gt 8192) { throw 'Units per cell must be between 0.125 and 8192.' }
-        if ($resolution -lt 4 -or $resolution -gt 512) { throw 'Resolution must be between 4 and 512 cells.' }
-        if ($threshold -lt 0 -or $threshold -gt 255) { throw 'Threshold must be between 0 and 255.' }
-        $accepted = 0
-        foreach ($path in $paths) {
-            if ((Test-Path -LiteralPath $path -PathType Leaf) -and [IO.Path]::GetExtension($path).ToLowerInvariant() -in '.png','.jpg','.jpeg','.webp','.bmp','.tif','.tiff') {
-                $state.Queue.Enqueue(@{ Source=$path; Folder=$folder; Depth=$depth.ToString($culture); Cell=$cell.ToString($culture); Resolution=$resolution; Threshold=$threshold; Mode=[string]$ui.Mask.SelectedItem.Tag; Orientation=[string]$ui.Orientation.SelectedItem.Tag }); $accepted++
-            } else { [void]$ui.Results.Items.Insert(0, "Skipped: $([IO.Path]::GetFileName($path)) - unsupported file.") }
-        }
-        if ($accepted -eq 0) { $ui.Status.Text = 'Drop PNG, JPG, WEBP, BMP or TIFF images.' } else { $ui.Status.Text = "$accepted image(s) queued."; Save-Preferences }
-    } catch { $ui.Status.Text = $_.Exception.Message }
+function Pick-Folder($control) {
+ $dialog=New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.SelectedPath=$control.Text
+ try { if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $control.Text=$dialog.SelectedPath; Save-Preferences } } finally { $dialog.Dispose() }
 }
-$ui.Browse.Add_Click({
-    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.Description = 'Choose the map source folder where prefabs will be saved'; $dialog.SelectedPath = $ui.Folder.Text
-    try { if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $ui.Folder.Text = $dialog.SelectedPath; Save-Preferences; $ui.Status.Text = 'Ready. Drop images to convert and save.' } } finally { $dialog.Dispose() }
-})
-$ui.ChooseImages.Add_Click({ $dialog = New-Object Microsoft.Win32.OpenFileDialog; $dialog.Multiselect = $true; $dialog.Filter = 'Images|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tif;*.tiff'; if ($dialog.ShowDialog($window)) { Add-Images $dialog.FileNames } })
-$ui.DropZone.Add_PreviewDragOver({ param($sender,$eventArgs); $eventArgs.Effects = if ($eventArgs.Data.GetDataPresent([Windows.DataFormats]::FileDrop)) { [Windows.DragDropEffects]::Copy } else { [Windows.DragDropEffects]::None }; $eventArgs.Handled = $true; $ui.DropZone.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#DCE7D4') })
-$ui.DropZone.Add_DragLeave({ $ui.DropZone.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#EAEFE5') })
-$ui.DropZone.Add_Drop({ param($sender,$eventArgs); $ui.DropZone.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#EAEFE5'); if ($eventArgs.Data.GetDataPresent([Windows.DataFormats]::FileDrop)) { Add-Images $eventArgs.Data.GetData([Windows.DataFormats]::FileDrop) }; $eventArgs.Handled = $true })
-$ui.OpenFolder.Add_Click({ if (Test-Path -LiteralPath $ui.Folder.Text -PathType Container) { Start-Process explorer.exe -ArgumentList ('"' + $ui.Folder.Text + '"') } else { $ui.Status.Text = 'Choose an existing prefab folder first.' } })
-
-# Poll serial child processes rather than blocking the window during conversions.
+function Add-Images([string[]]$paths, [string]$kind='prefab') {
+ try {
+  if ($kind -eq 'texture' -and $paths.Count -ne 1) { throw 'Drop exactly one image in the Single texture tab.' }
+  $game=$ui.Game.Text.Trim().Trim('"'); $folder=$ui.Folder.Text.Trim().Trim('"')
+  if (($kind -eq 'texture' -or $ui.AutoTexture.IsChecked) -and -not (Test-Path -LiteralPath (Join-Path $game 'bin\converter.exe') -PathType Leaf)) { throw 'Choose the CoD4 folder containing bin\converter.exe.' }
+  $settings=@{}
+  if ($kind -eq 'prefab') {
+   if (-not (Test-Path -LiteralPath $folder -PathType Container)) { throw 'Choose an existing prefab destination folder.' }
+   $culture=[Globalization.CultureInfo]::InvariantCulture
+   $depth=[double]::Parse($ui.Depth.Text,$culture); $cell=[double]::Parse($ui.Cell.Text,$culture); $resolution=[int]::Parse($ui.Resolution.Text,$culture); $threshold=[int]::Parse($ui.Threshold.Text,$culture)
+   if ([double]::IsNaN($depth) -or [double]::IsInfinity($depth) -or $depth -lt 0.125 -or $depth -gt 8192) { throw 'Depth must be 0.125 to 8192.' }
+   if ([double]::IsNaN($cell) -or [double]::IsInfinity($cell) -or $cell -lt 0.125 -or $cell -gt 8192) { throw 'Units per cell must be 0.125 to 8192.' }
+   if ($resolution -lt 4 -or $resolution -gt 512 -or $threshold -lt 0 -or $threshold -gt 255) { throw 'Resolution must be 4–512; threshold must be 0–255.' }
+   $settings=@{depth=$depth;cell=$cell;resolution=$resolution;threshold=$threshold;mode=[string]$ui.Mask.SelectedItem.Tag;orientation=[string]$ui.Orientation.SelectedItem.Tag}
+  }
+  foreach ($path in $paths) {
+   if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or [IO.Path]::GetExtension($path).ToLowerInvariant() -notin '.png','.jpg','.jpeg','.webp','.bmp','.tif','.tiff') { throw 'Choose PNG, JPG, WEBP, BMP or TIFF images.' }
+  }
+  foreach ($path in $paths) { $state.Queue.Enqueue(@{kind=$kind;source=$path;folder=$folder;game=$game;auto_texture=[bool]$ui.AutoTexture.IsChecked;settings=$settings;name=$ui.MaterialName.Text}) }
+  Save-Preferences; $ui.Status.Text="$($paths.Count) image(s) queued."
+ } catch { $ui.Status.Text=$_.Exception.Message }
+}
+function Pick-Images([string]$kind) {
+ $dialog=New-Object Microsoft.Win32.OpenFileDialog; $dialog.Multiselect=$kind -eq 'prefab'; $dialog.Filter='Images|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tif;*.tiff'
+ if ($dialog.ShowDialog($window)) { Add-Images $dialog.FileNames $kind }
+}
+$ui.BrowseGame.Add_Click({ Pick-Folder $ui.Game }); $ui.Browse.Add_Click({ Pick-Folder $ui.Folder })
+$ui.ChooseImages.Add_Click({ Pick-Images 'prefab' }); $ui.ChooseTexture.Add_Click({ Pick-Images 'texture' })
+foreach ($zone in @($ui.DropZone,$ui.TextureDrop)) {
+ $zone.Add_PreviewDragOver({param($sender,$eventArgs); $eventArgs.Effects=if ($eventArgs.Data.GetDataPresent([Windows.DataFormats]::FileDrop)) {[Windows.DragDropEffects]::Copy} else {[Windows.DragDropEffects]::None}; $eventArgs.Handled=$true })
+ $zone.Add_Drop({param($sender,$eventArgs); if ($eventArgs.Data.GetDataPresent([Windows.DataFormats]::FileDrop)) { $kind=if ($sender.Name -eq 'TextureDrop') {'texture'} else {'prefab'}; Add-Images $eventArgs.Data.GetData([Windows.DataFormats]::FileDrop) $kind }; $eventArgs.Handled=$true })
+}
+$ui.OpenFolder.Add_Click({if (Test-Path -LiteralPath $ui.Folder.Text -PathType Container) { Start-Process explorer.exe -ArgumentList ('"'+$ui.Folder.Text+'"') }})
+$ui.OpenLogs.Add_Click({$path=Join-Path $appRoot '.prefabdrop\logs'; if (Test-Path -LiteralPath $path) { Start-Process explorer.exe -ArgumentList ('"'+$path+'"') } else { $ui.Status.Text='No material conversions have run yet.' }})
+$ui.CopyMaterial.Add_Click({if ($state.Material) { [Windows.Clipboard]::SetText($state.Material); $ui.Status.Text='Copied '+$state.Material }})
 function Tick-Queue {
-    if ($null -ne $state.Process -and $state.Process.HasExited) {
-        try {
-            $stdout = $state.Process.StandardOutput.ReadToEnd(); $stderr = $state.Process.StandardError.ReadToEnd()
-            if ($state.Process.ExitCode -ne 0) { throw $stderr.Trim() }
-            $report = $stdout | ConvertFrom-Json
-            $stem = [regex]::Replace([IO.Path]::GetFileNameWithoutExtension($state.Job.Source), '[^A-Za-z0-9_-]', '_').Trim('_')
-            if (-not $stem) { $stem = 'image' }; if ($stem.Length -gt 80) { $stem = $stem.Substring(0,80) }; $stem = 'prefab_' + $stem
-            $suffix = 0
-            while ($true) {
-                $name = if ($suffix -eq 0) { "$stem.map" } else { "${stem}_$suffix.map" }
-                $destination = Join-Path $state.Job.Folder $name
-                try { [IO.File]::Copy($state.Temp, $destination, $false); break }
-                catch [IO.IOException] { if ([IO.File]::Exists($destination)) { $suffix++; continue }; throw }
-            }
-            $state.Done++; [void]$ui.Results.Items.Insert(0, "Saved $name - $($report.brushes) brushes")
-        } catch { $state.Failed++; [void]$ui.Results.Items.Insert(0, "Failed: $([IO.Path]::GetFileName($state.Job.Source)) - $($_.Exception.Message)") }
-        finally {
-            if ($state.Temp -and [IO.File]::Exists($state.Temp)) { [IO.File]::Delete($state.Temp) }
-            $state.Process.Dispose(); $state.Process = $null
-            $ui.Status.Text = "$($state.Done) saved | $($state.Failed) failed | $($state.Queue.Count) queued"; $ui.DropTitle.Text = 'Drop images here'
-        }
-    }
-    if ($null -eq $state.Process -and $state.Queue.Count -gt 0) {
-        $state.Job = $state.Queue.Dequeue(); $state.Temp = Join-Path ([IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString() + '.map'); $job = $state.Job
-        $arguments = @((Join-Path $appRoot 'app.py'), $job.Source, '-o', $state.Temp, '--mode', $job.Mode, '--depth', $job.Depth, '--cell', $job.Cell, '--resolution', $job.Resolution, '--threshold', $job.Threshold, '--orientation', $job.Orientation)
-        $start = New-Object Diagnostics.ProcessStartInfo; $start.FileName = $workerPython
-        $start.Arguments = ($arguments | ForEach-Object { '"' + [string]$_ + '"' }) -join ' '
-        $start.UseShellExecute = $false; $start.CreateNoWindow = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
-        $start.EnvironmentVariables['PYTHONIOENCODING'] = 'utf-8'; $start.StandardOutputEncoding = [Text.Encoding]::UTF8; $start.StandardErrorEncoding = [Text.Encoding]::UTF8
-        try { $state.Process = [Diagnostics.Process]::Start($start); $ui.Status.Text = "Converting $([IO.Path]::GetFileName($job.Source))..."; $ui.DropTitle.Text = 'Converting...' }
-        catch { $state.Process = $null; $state.Failed++; $ui.Status.Text = "Could not start converter: $($_.Exception.Message)" }
-    }
+ if ($null -ne $state.Process -and $state.Process.HasExited) {
+  try {
+   if (-not (Test-Path -LiteralPath $state.Response)) { throw 'The converter worker stopped before returning a result. Check Python and Pillow installation.' }
+   $report=Get-Content -LiteralPath $state.Response -Raw -Encoding UTF8 | ConvertFrom-Json
+   if (-not $report.ok) { throw $report.error }
+   $state.Material=[string]$report.result.material; $state.Done++
+   $message=if ($state.Job.kind -eq 'texture') {"Imported $($state.Material) - reload textures in Radiant."} else {"Saved $([IO.Path]::GetFileName($report.result.output)) - $($report.result.brushes) brushes - $($state.Material)"}
+   [void]$ui.Results.Items.Insert(0,$message)
+  } catch { $state.Failed++; [void]$ui.Results.Items.Insert(0,"Failed: $([IO.Path]::GetFileName($state.Job.source)) - $($_.Exception.Message)") }
+  finally { foreach ($path in @($state.Request,$state.Response)) { if ([IO.File]::Exists($path)) { [IO.File]::Delete($path) } }; $state.Process.Dispose(); $state.Process=$null; $ui.Status.Text="$($state.Done) completed | $($state.Failed) failed | $($state.Queue.Count) queued" }
+ }
+ if ($null -eq $state.Process -and $state.Queue.Count -gt 0) {
+  $state.Job=$state.Queue.Dequeue(); $id=[Guid]::NewGuid().ToString(); $state.Request=Join-Path ([IO.Path]::GetTempPath()) ($id+'.request.json'); $state.Response=Join-Path ([IO.Path]::GetTempPath()) ($id+'.response.json')
+  try {
+   $state.Job | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $state.Request -Encoding UTF8
+   $start=New-Object Diagnostics.ProcessStartInfo; $start.FileName=$workerPython
+   $start.Arguments=(@((Join-Path $appRoot 'worker.py'),$state.Request,$state.Response) | ForEach-Object {'"'+$_+'"'}) -join ' '
+   $start.UseShellExecute=$false; $start.CreateNoWindow=$true; $start.EnvironmentVariables['PYTHONIOENCODING']='utf-8'
+   $state.Process=[Diagnostics.Process]::Start($start); $ui.Status.Text='Converting '+[IO.Path]::GetFileName($state.Job.source)+'...'
+  } catch { $state.Process=$null; $state.Failed++; if ([IO.File]::Exists($state.Request)) { [IO.File]::Delete($state.Request) }; $ui.Status.Text=$_.Exception.Message }
+ }
 }
-$timer = New-Object Windows.Threading.DispatcherTimer; $timer.Interval = [TimeSpan]::FromMilliseconds(150); $timer.Add_Tick({ Tick-Queue })
-$window.Add_Closing({ param($sender,$eventArgs); if ($null -ne $state.Process -or $state.Queue.Count -gt 0) { $eventArgs.Cancel = $true; $ui.Status.Text = 'Finishing queued conversions. Close the window when they finish.' } else { Save-Preferences; $timer.Stop() } })
+$timer=New-Object Windows.Threading.DispatcherTimer; $timer.Interval=[TimeSpan]::FromMilliseconds(150); $timer.Add_Tick({Tick-Queue})
+$window.Add_Closing({param($sender,$eventArgs); if ($null -ne $state.Process -or $state.Queue.Count -gt 0) { $eventArgs.Cancel=$true; $ui.Status.Text='Finishing queued conversions. Close when they finish.' } else {Save-Preferences; $timer.Stop()}})
 if ($SmokeTest) {
-    $window.Measure([Windows.Size]::new(760,780)); $window.Arrange([Windows.Rect]::new(0,0,760,780)); $window.UpdateLayout()
-    if ($RenderPath) {
-        $surface = $window.Content
-        $surface.Measure([Windows.Size]::new(696,690)); $surface.Arrange([Windows.Rect]::new(0,0,696,690)); $surface.UpdateLayout()
-        $bitmap = New-Object Windows.Media.Imaging.RenderTargetBitmap 760,780,96,96,([Windows.Media.PixelFormats]::Pbgra32)
-        $visual = New-Object Windows.Media.DrawingVisual
-        $drawing = $visual.RenderOpen()
-        $drawing.DrawRectangle([Windows.Media.BrushConverter]::new().ConvertFromString('#F5F5F0'), $null, [Windows.Rect]::new(0,0,760,780))
-        $drawing.Close(); $bitmap.Render($visual); $bitmap.Render($surface)
-        $encoder = New-Object Windows.Media.Imaging.PngBitmapEncoder
-        $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
-        $stream = [IO.File]::Create($RenderPath)
-        try { $encoder.Save($stream) } finally { $stream.Dispose() }
-    }
-    if ($TestFolder) {
-        $ui.Folder.Text = Join-Path $TestFolder 'missing-folder'
-        Add-Images @((Join-Path $appRoot 'examples\honeycomb.png'))
-        if ($state.Queue.Count -ne 0) { throw 'Invalid destination was accepted.' }
-        $ui.Folder.Text = $TestFolder
-        $ui.Depth.Text = 'NaN'
-        Add-Images @((Join-Path $appRoot 'examples\honeycomb.png'))
-        if ($state.Queue.Count -ne 0) { throw 'Invalid depth was accepted.' }
-        $ui.Depth.Text = '32'
-        $data = New-Object Windows.DataObject
-        $data.SetData([Windows.DataFormats]::FileDrop, [string[]]@((Join-Path $appRoot 'examples\honeycomb.png'),(Join-Path $appRoot 'examples\honeycomb.png')))
-        $constructor = [Windows.DragEventArgs].GetConstructors([Reflection.BindingFlags]'Instance,NonPublic,Public')[0]
-        $drop = $constructor.Invoke([object[]]@($data.PSObject.BaseObject, [Windows.DragDropKeyStates]::None, [Windows.DragDropEffects]::Copy, $ui.DropZone.PSObject.BaseObject, [Windows.Point]::new(10,10)))
-        $drop.RoutedEvent = [Windows.DragDrop]::DropEvent
-        $ui.DropZone.RaiseEvent($drop)
-        $deadline = [DateTime]::Now.AddSeconds(30)
-        while (($state.Queue.Count -gt 0 -or $null -ne $state.Process) -and [DateTime]::Now -lt $deadline) { Tick-Queue; Start-Sleep -Milliseconds 100 }
-        if ($state.Done -ne 2 -or $state.Failed -ne 0) { throw "Queue test failed: $($ui.Results.Items -join ', ')" }
-        Write-Output 'PASS: drop event, invalid folder/depth checks, and background queue with duplicate filenames.'
-    }
-    Write-Output "PASS: WPF layout loaded; $($ui.Count) controls found."
-    $window.Close()
-} else { $timer.Start(); [void]$window.ShowDialog() }
+ $ui.Tabs.SelectedIndex=$RenderTab; $window.Measure([Windows.Size]::new(780,900)); $window.Arrange([Windows.Rect]::new(0,0,780,900)); $window.UpdateLayout()
+ if ($RenderPath) {
+  $surface=$window.Content; $surface.Measure([Windows.Size]::new(720,830)); $surface.Arrange([Windows.Rect]::new(0,0,720,830)); $surface.UpdateLayout()
+  $bitmap=New-Object Windows.Media.Imaging.RenderTargetBitmap 780,900,96,96,([Windows.Media.PixelFormats]::Pbgra32); $visual=New-Object Windows.Media.DrawingVisual; $drawing=$visual.RenderOpen(); $drawing.DrawRectangle([Windows.Media.BrushConverter]::new().ConvertFromString('#F5F5F0'),$null,[Windows.Rect]::new(0,0,780,900)); $drawing.Close(); $bitmap.Render($visual); $bitmap.Render($surface)
+  $encoder=New-Object Windows.Media.Imaging.PngBitmapEncoder; $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap)); $stream=[IO.File]::Create($RenderPath); try {$encoder.Save($stream)} finally {$stream.Dispose()}
+ }
+ if ($TestFolder) {
+  $ui.Folder.Text=$TestFolder; $sample=Join-Path $appRoot 'examples\honeycomb.png'
+  foreach ($zone in @($ui.DropZone,$ui.TextureDrop)) {
+   $data=New-Object Windows.DataObject; $data.SetData([Windows.DataFormats]::FileDrop,[string[]]@($sample)); $constructor=[Windows.DragEventArgs].GetConstructors([Reflection.BindingFlags]'Instance,NonPublic,Public')[0]
+   $drop=$constructor.Invoke([object[]]@($data.PSObject.BaseObject,[Windows.DragDropKeyStates]::None,[Windows.DragDropEffects]::Copy,$zone.PSObject.BaseObject,[Windows.Point]::new(10,10))); $drop.RoutedEvent=[Windows.DragDrop]::DropEvent; $zone.RaiseEvent($drop)
+  }
+  $deadline=[DateTime]::Now.AddSeconds(120)
+  while (($state.Queue.Count -gt 0 -or $null -ne $state.Process) -and [DateTime]::Now -lt $deadline) {Tick-Queue; Start-Sleep -Milliseconds 100}
+  if ($state.Done -ne 2 -or $state.Failed) {throw "Integration failed: $($ui.Results.Items -join ', ') $($ui.Status.Text)"}
+  Write-Output 'PASS: both tab drop handlers and real auto-textured prefab / standalone material conversions.'
+ }
+ Write-Output "PASS: $($ui.Count) WPF controls loaded."; $window.Close()
+} else {$timer.Start(); [void]$window.ShowDialog()}

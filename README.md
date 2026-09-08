@@ -12,14 +12,14 @@ Double-click **Launch.cmd** to open **Prefab Drop**, a native Windows applicatio
 
 The folder and conversion settings are remembered in `preferences.json` alongside the app. **Open prefab folder** opens the selected destination in Explorer. The queue runs in the background so the window stays responsive. The app waits for queued work to finish before closing.
 
-Depth, solid area, and orientation are visible; resolution, cell size, and threshold are under **Size and detail**. Default output is 384 units along the longest image edge, 32 units deep. Output uses caulk. For a quick trial, drop `examples/honeycomb.png`.
+Depth, solid area, and orientation are visible; resolution, cell size, and threshold are under **Size and detail**. Default output is 384 units along the longest image edge, 32 units deep. Auto texture is enabled by default; turn it off for caulk-only output. For a quick trial, drop `examples/honeycomb.png`.
 
 The interface uses Windows PowerShell/WPF, with no browser, server, or extra UI packages. The converter uses a local `.venv` when available, then Codex bundled Python, then system Python.
-On another machine install Python 3.10+ with Tk, then run:
+On another Windows machine install standard Windows Python 3.14 (not MSYS2/MinGW), then run:
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
+py -3.14 -m venv .venv
+.venv\Scripts\python -m pip install --only-binary=:all: -r requirements.txt
 ```
 
 ## Geometry settings and Radiant import
@@ -41,7 +41,21 @@ python -m venv .venv
 - Rejects empty masks, invalid dimensions/material names, excessive brush counts, and geometry beyond the configured coordinate guardrail.
 - Processes images locally without uploads.
 
-This is a **grid-based extrusion MVP**. Diagonal and curved edges are stepped, not vector-traced or beveled. More resolution improves those edges but can create many small brushes. The brush limit is an application guardrail, not a statement of engine limits. Very thin features can disappear during sampling. There is no photo-to-3D reconstruction, heightmap interpretation, automatic material generation, or patch export yet. The preview is illustrative, not a Radiant renderer.
+This is a **grid-based extrusion MVP**. Diagonal and curved edges are stepped, not vector-traced or beveled. More resolution improves those edges but can create many small brushes. The brush limit is an application guardrail, not a statement of engine limits. Very thin features can disappear during sampling. There is no photo-to-3D reconstruction, heightmap interpretation, or patch export yet. The preview is illustrative, not a Radiant renderer.
+
+## Custom materials
+
+Set **CoD4 Mod Tools folder** to the installation containing `bin/converter.exe`. With automatic texture enabled, dropping an image compiles an opaque metal colour material and assigns it to the prefab. Front/back faces share one fitted projection over the entire image canvas, including margins. CoD4 texture sizes and shifts are in world units. Thin side faces retain tiled mapping.
+
+The **Single texture** tab imports one image without creating geometry. Use **Copy material name**, reload textures or restart Radiant, and find the returned `pd_...` material under **Generic / floor**. No `textures/` prefix is used. The app does not control a running Radiant session.
+
+Images become TGA sources with power-of-two dimensions from 32 to 1024 per axis. Alpha is flattened onto dark grey for the opaque material; PNG transparency can still define the geometry mask. This is source-image colour import, not generated normal/specular maps or reconstructed side artwork.
+
+Sources are saved in `texture_assets` and `source_data`; compiled assets are saved in `raw/materials`, `raw/images`, and `raw/material_properties`. Content-based names prevent collisions. Unchanged verified assets are reused. **Conversion logs** opens `.prefabdrop/logs`. Failure to compile prevents prefab output, while source files and logs remain for diagnosis.
+
+The importer runs `converter.exe -nopause -single material <name>` from the installation's `bin` directory. It verifies the generated files because this converter can return zero after an error. Conversions have a 90-second timeout and are serialized with an OS-managed lock. The selected installation must include the material definitions supplied with the Mod Tools.
+
+Build and package maps normally to include these editor assets in the final game distribution. Installing into `raw` does not itself build a fastfile or IWD.
 
 ## CLI
 
