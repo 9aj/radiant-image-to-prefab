@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 from PIL import Image, ImageDraw
 base=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(base))
-from core import Settings,build,map_text,preview
+sys.path.insert(0,str(base/'src'))
+from prefabdrop.core import Settings,build,map_text,preview
 folder=base/'examples'; folder.mkdir(exist_ok=True)
 im=Image.new('RGB',(512,448),'white'); d=ImageDraw.Draw(im)
 for col in range(5):

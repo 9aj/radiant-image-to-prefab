@@ -1,6 +1,6 @@
 import random
 import unittest
-from core import rectangles, _run_rectangles
+from prefabdrop.core import rectangles, _run_rectangles
 
 
 class RectangleTests(unittest.TestCase):

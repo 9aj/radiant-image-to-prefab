@@ -1,3 +1,5 @@
+from .paths import APP_ROOT
+from .paths import APP_ROOT
 """CoD4 material import through the installed Mod Tools converter."""
 from contextlib import contextmanager
 import hashlib
@@ -104,7 +106,7 @@ def import_material(source, installation, label=None):
     name = asset_name(source, data, label)
     gdt = root / 'source_data' / (name + '.gdt')
     texture = root / 'texture_assets' / (name + '.tga')
-    log_dir = Path(__file__).resolve().parent / '.prefabdrop' / 'logs'
+    log_dir = APP_ROOT / '.prefabdrop' / 'logs'
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / (name + '.log')
     manifest = log_dir / (name + '.json')

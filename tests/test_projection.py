@@ -1,5 +1,5 @@
 import unittest
-from core import map_text
+from prefabdrop.core import map_text
 
 
 class ProjectionTests(unittest.TestCase):

@@ -1,6 +1,50 @@
+# Local credentials and personal scripts (never commit real keys)
+.env
+.env.*
+!.env.example
+*.local.*
+exec.ps1
+credentials*
+secrets*
+token
+token.*
+stored_tokens
+*.key
+*.pem
+.huggingface/
+.hf/
+.cache/
+# Python environments / generated files
+.venv*/
+venv/
 __pycache__/
 *.py[cod]
-.venv/
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+# Local app state and logs
 preferences.json
 .prefabdrop/
-.venv-*/
+*.log
+*.bak
+# Downloaded third-party source and weights
+tools/stable-fast-3d/
+models/
+weights/
+checkpoints/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.bin
+# Compiled game assets and generated mesh exports
+*.ff
+*.iwd
+*.iwi
+*.d3dbsp
+*.obj
+*.glb
+*.gltf
+*_source/

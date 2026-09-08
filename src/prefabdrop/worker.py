@@ -1,15 +1,23 @@
+from .paths import APP_ROOT
+from .paths import APP_ROOT
 """JSON job bridge for the native UI. Converter logs never fill UI process pipes."""
 import argparse
 import json
 from pathlib import Path
 import sys
 from PIL import Image
-from core import Settings, build, map_text
-from materials import import_material
+from .core import Settings, build, map_text
+from .materials import import_material
+from .sf3d_pipeline import generate as generate_3d
 
 
 def run(job):
+    if job['kind'] == 'usermap':
+        from .usermap_build import build_usermap
+        return build_usermap(job)
     source = Path(job['source'])
+    if job['kind'] == 'sf3d':
+        return generate_3d(job, APP_ROOT)
     if job['kind'] == 'texture':
         return import_material(source, job['game'], job.get('name'))
     if job['kind'] != 'prefab':
