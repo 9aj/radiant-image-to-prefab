@@ -54,7 +54,7 @@ def image_mask(image, settings):
     return mask
 
 
-def rectangles(mask):
+def _run_rectangles(mask):
     """Merge identical horizontal runs on adjacent rows; exact mask coverage."""
     active, result = {}, []
     for y, row in enumerate(mask):
@@ -74,6 +74,47 @@ def rectangles(mask):
         active = current
     result.extend(active.values())
     return result
+
+
+def _greedy_rectangles(mask):
+    """Choose the largest rectangle anchored at the next uncovered solid cell."""
+    rows = [bytearray(row) for row in mask]
+    height, width = len(rows), len(rows[0])
+    result = []
+    for y in range(height):
+        x = 0
+        while x < width:
+            if not rows[y][x]:
+                x += 1
+                continue
+            limit, best_area, best = width, 0, None
+            for bottom in range(y, height):
+                if not rows[bottom][x]:
+                    break
+                right = x
+                while right < limit and rows[bottom][right]:
+                    right += 1
+                limit = right
+                area = (right-x)*(bottom-y+1)
+                if area > best_area:
+                    best_area, best = area, (x,y,right,bottom+1)
+            _, _, right, bottom = best
+            for row in rows[y:bottom]:
+                row[x:right] = bytes(right-x)
+            result.append(best)
+            x = right
+    return result
+
+
+def rectangles(mask):
+    """Best of four exact, disjoint partitions; never worse than row-run merging."""
+    if not mask or not mask[0]:
+        return []
+    transposed = list(zip(*mask))
+    candidates = [_run_rectangles(mask), _greedy_rectangles(mask)]
+    for method in (_run_rectangles, _greedy_rectangles):
+        candidates.append([(y,x,Y,X) for x,y,X,Y in method(transposed)])
+    return min(candidates, key=len)
 
 
 def build(image, settings):
