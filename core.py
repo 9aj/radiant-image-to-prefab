@@ -110,8 +110,12 @@ def face_points(box):
     ]
 
 
-def map_text(boxes, material='caulk'):
+def map_text(boxes, material='caulk', image_projection=None):
     Settings(material=material).validate()
+    if image_projection is not None:
+        width, height, pixel_width, pixel_height, orientation = image_projection
+        if orientation not in ('floor', 'wall') or not all(math.isfinite(v) and v > 0 for v in (width, height, pixel_width, pixel_height)):
+            raise ValueError('Invalid image projection.')
     if not boxes:
         raise ValueError('Cannot export an empty prefab.')
     lines = ['iwmap 4', '// entity 0', '{', '"classname" "worldspawn"']
@@ -119,9 +123,18 @@ def map_text(boxes, material='caulk'):
         if len(box) != 6 or not all(math.isfinite(v) for v in box) or any(box[j] >= box[j+3] for j in range(3)):
             raise ValueError('Invalid or zero-volume brush.')
         lines.extend([f'// brush {i}', '{'])
-        for points in face_points(box):
+        for face_index, points in enumerate(face_points(box)):
             plane = ' '.join('( ' + ' '.join(f'{v:.6f}'.rstrip('0').rstrip('.') if v else '0' for v in p) + ' )' for p in points)
-            lines.append(f'{plane} {material} 128 128 0 0 0 0 lightmap_gray 16384 16384 0 0 0 0')
+            mapping = '128 128 0 0 0 0'
+            if image_projection is not None and face_index in ((0, 1) if orientation == 'floor' else (2, 4)):
+                # CoD stores both repeat sizes and shifts in WORLD units.
+                # Verified against IW3xRadiant's Brush_FitTexture helper at
+                # 0x47c590: offsets are computed from projected world bounds.
+                # A shared transform spans the full image canvas, including blank
+                # margins, rather than fitting a fresh copy to each small brush.
+                # U=x/width+0.5; V=-y/height+0.5 (or -z for a wall).
+                mapping = f'{width:g} {height:g} {width / 2:g} {-height / 2:g} 0 0'
+            lines.append(f'{plane} {material} {mapping} lightmap_gray 16384 16384 0 0 0 0')
         lines.append('}')
     return '\n'.join(lines + ['}', ''])
 
