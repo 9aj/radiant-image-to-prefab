@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from PIL import Image
-import materials
-import worker
+from prefabdrop import materials
+from prefabdrop import worker
 
 
 class MaterialTests(unittest.TestCase):
@@ -38,7 +38,7 @@ class MaterialTests(unittest.TestCase):
         self.assertEqual(path.read_bytes(),b'first')
 
     def test_zero_exit_without_outputs_is_failure(self):
-        with patch('materials.subprocess.run',return_value=subprocess.CompletedProcess([],0,b'',b'')):
+        with patch('prefabdrop.materials.subprocess.run',return_value=subprocess.CompletedProcess([],0,b'',b'')):
             with self.assertRaisesRegex(ValueError,'did not create'):
                 materials.import_material(self.source,self.root)
 
@@ -48,7 +48,7 @@ class MaterialTests(unittest.TestCase):
             (self.root/'raw/materials'/name).write_bytes(b'material')
             (self.root/'raw/images'/(name+'.iwi')).write_bytes(b'IWi\x06fake')
             return subprocess.CompletedProcess([],0,b'aborting....',b'')
-        with patch('materials.subprocess.run',side_effect=convert):
+        with patch('prefabdrop.materials.subprocess.run',side_effect=convert):
             with self.assertRaisesRegex(ValueError,'reported an error'):
                 materials.import_material(self.source,self.root)
 
@@ -61,7 +61,7 @@ class MaterialTests(unittest.TestCase):
             (self.root/'raw/material_properties'/name).write_bytes(b'metadata')
             (self.root/'raw/images'/(name+'.iwi')).write_bytes(b'IWi\x06fake')
             return subprocess.CompletedProcess([],0,b'Converted',b'')
-        with patch('materials.subprocess.run',side_effect=convert) as run:
+        with patch('prefabdrop.materials.subprocess.run',side_effect=convert) as run:
             first=materials.import_material(self.source,self.root)
             second=materials.import_material(self.source,self.root)
             self.assertFalse(first['cached']); self.assertTrue(second['cached']); self.assertEqual(run.call_count,1)
@@ -73,13 +73,13 @@ class MaterialTests(unittest.TestCase):
             self.assertEqual(run.call_count,3)
 
     def test_prefab_failure_does_not_save_map(self):
-        with patch('worker.import_material',side_effect=ValueError('conversion failed')):
+        with patch('prefabdrop.worker.import_material',side_effect=ValueError('conversion failed')):
             with self.assertRaises(ValueError): worker.run({'kind':'prefab','source':str(self.source),'folder':str(self.root),'game':str(self.root),'auto_texture':True})
         self.assertEqual(list(self.root.glob('*.map')),[])
 
     def test_assignment_and_no_overwrite(self):
         job={'kind':'prefab','source':str(self.source),'folder':str(self.root),'game':str(self.root),'auto_texture':True}
-        with patch('worker.import_material',return_value={'material':'pd_test_123', 'size':(64,128)}):
+        with patch('prefabdrop.worker.import_material',return_value={'material':'pd_test_123', 'size':(64,128)}):
             first=worker.run(job); second=worker.run(job)
         self.assertNotEqual(first['output'],second['output'])
         text=Path(first['output']).read_text()

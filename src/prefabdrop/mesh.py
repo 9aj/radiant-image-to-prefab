@@ -97,11 +97,17 @@ def map_text(mesh: ObjMesh, material: str, texture_size: tuple[int, int], longes
         area2 = math.sqrt((ay*bz-az*by)**2 + (az*bx-ax*bz)**2 + (ax*by-ay*bx)**2)
         if area2 <= 1e-6:
             continue
+        # Project onto the dominant face plane, independently of the albedo UVs.
+        # Radiant's lightmap coordinates use a 512-unit reference scale.
+        normal = (ay*bz-az*by, az*bx-ax*bz, ax*by-ay*bx)
+        drop_axis = max(range(3), key=lambda axis: abs(normal[axis]))
+        light_axes = [axis for axis in range(3) if axis != drop_axis]
         records = []
         for corner, point in zip(triangle, points):
             u, v = mesh.texcoords[corner.texcoord]
             records.append('v ' + ' '.join(_number(n) for n in point) +
-                           ' t ' + _number(u * width) + ' ' + _number((1-v) * height) + ' 0 0')
+                           ' t ' + _number(u * width) + ' ' + _number((1-v) * height) +
+                           ' ' + ' '.join(_number(point[axis] / 512) for axis in light_axes))
         lines.extend([
             f'// brush {written}', ' {', '  mesh', '  {', f'   {material}', '   lightmap_gray',
             '   smoothing smoothing_hard', '   2 2 16 8', '   (', f'    {records[0]}', f'    {records[0]}',

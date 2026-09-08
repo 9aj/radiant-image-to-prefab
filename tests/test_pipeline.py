@@ -3,7 +3,7 @@ import random
 import re
 import unittest
 from PIL import Image
-from core import Settings, image_mask, rectangles, build, face_points, map_text
+from prefabdrop.core import Settings, image_mask, rectangles, build, face_points, map_text
 
 
 class PipelineTests(unittest.TestCase):

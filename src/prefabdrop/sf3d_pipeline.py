@@ -6,8 +6,8 @@ import shutil
 import subprocess
 import uuid
 
-from materials import import_material
-from mesh import load_obj, map_text
+from .materials import import_material
+from .mesh import load_obj, map_text
 
 
 def _unique(directory: Path, stem: str, suffix: str) -> Path:
@@ -46,7 +46,7 @@ def generate(job: dict, app_root: str | Path) -> dict:
     log_dir = root / '.prefabdrop' / 'logs'
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f'sf3d-{work.name}.log'
-    command = [str(sf3d_python), str(root / 'sf3d_bridge.py'), '--repo', str(sf3d_repo),
+    command = [str(sf3d_python), str(root / 'src' / 'prefabdrop' / 'sf3d_bridge.py'), '--repo', str(sf3d_repo),
                '--image', str(source), '--output', str(work), '--texture-resolution', str(texture_resolution),
                '--target-vertices', str(target_vertices)]
     try:

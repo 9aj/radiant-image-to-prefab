@@ -1,7 +1,7 @@
 ﻿param([switch]$SmokeTest, [string]$TestFolder, [string]$RenderPath, [int]$RenderTab=0)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
-$appRoot = $PSScriptRoot
+$appRoot = Split-Path -Parent $PSScriptRoot
 $settingsFile = Join-Path $appRoot 'preferences.json'
 $bundledPython = Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
 $venvPython = Join-Path $appRoot '.venv\Scripts\python.exe'
@@ -39,7 +39,7 @@ $workerPython = if (Test-Path -LiteralPath $venvPython) { $venvPython } elseif (
     <TextBlock Text="After import, reload textures or restart Radiant and search for the material name shown below." TextWrapping="Wrap" Foreground="#69736B"/>
    </StackPanel></TabItem>
    <TabItem Header="3D asset"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,18,0,0">
-    <TextBlock Text="Stable Fast 3D" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="Turn one object image into a textured Radiant mesh prefab." TextWrapping="Wrap" Foreground="#69736B" Margin="0,7,0,20"/>
+    <TextBlock Text="Stable Fast 3D · Powered by Stability AI" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="Turn one object image into a textured Radiant mesh prefab." TextWrapping="Wrap" Foreground="#69736B" Margin="0,7,0,20"/>
     <TextBlock Text="3D PREFAB DESTINATION" FontSize="11" Foreground="#63755F" Margin="0,0,0,7"/><Grid Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="MeshFolder" AutomationProperties.Name="3D prefab destination folder"/><Button x:Name="BrowseMeshFolder" Grid.Column="1" Content="Choose folder" Margin="10,0,0,0"/></Grid>
     <Border x:Name="SF3DDrop" Background="#EAEFE5" BorderBrush="#BBCAB4" BorderThickness="1" CornerRadius="12" AllowDrop="True" Padding="27"><StackPanel HorizontalAlignment="Center"><TextBlock Text="⬡" Foreground="#758C68" FontSize="32" HorizontalAlignment="Center"/><TextBlock Text="Drop one object image" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,6"/><TextBlock Text="Generate a textured mesh and .map prefab" Foreground="#69736B" HorizontalAlignment="Center"/><Button x:Name="ChooseSF3D" Content="or choose an image" Margin="0,14,0,0" HorizontalAlignment="Center"/></StackPanel></Border>
     <Grid Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -48,6 +48,20 @@ $workerPython = if (Test-Path -LiteralPath $venvPython) { $venvPython } elseif (
      <StackPanel Grid.Column="4"><TextBlock Text="Texture" Margin="0,0,0,5"/><ComboBox x:Name="MeshTexture" SelectedIndex="1"><ComboBoxItem Content="512 px" Tag="512"/><ComboBoxItem Content="1024 px" Tag="1024"/><ComboBoxItem Content="2048 px" Tag="2048"/></ComboBox></StackPanel>
     </Grid>
     <TextBlock Text="The model runs locally in a separate Python environment. First use requires the Stable Fast 3D setup and approved Hugging Face model access." TextWrapping="Wrap" Foreground="#69736B" Margin="0,18,0,0"/>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="Build &amp; package"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,22,0,0">
+    <TextBlock Text="Ready for devmap" FontSize="21" FontWeight="SemiBold"/>
+    <TextBlock Text="Build fastfiles and bundle custom textures into your usermap folder." TextWrapping="Wrap" Foreground="#69736B" Margin="0,7,0,20"/>
+    <TextBlock Text="MAP NAME" FontSize="11" Foreground="#63755F" Margin="0,0,0,7"/>
+    <ComboBox x:Name="BuildMap" IsEditable="True" Margin="0,0,0,16"/>
+    <TextBlock Text="IWI IMAGE FOLDER" FontSize="11" Foreground="#63755F" Margin="0,0,0,7"/>
+    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="BuildImages"/><Button x:Name="BrowseBuildImages" Grid.Column="1" Content="Choose folder" Margin="10,0,0,0"/></Grid>
+    <TextBlock Text="All .iwi files in this folder are bundled beneath images/ in an .iwd archive. Defaults to raw/images." TextWrapping="Wrap" Foreground="#69736B" Margin="0,8,0,20"/>
+    <Button x:Name="BuildPackage" Content="Build fastfiles + bundle textures" HorizontalAlignment="Left" Padding="22,14"/>
+    <Button x:Name="BundleOnly" Content="Bundle textures only" HorizontalAlignment="Left" Margin="0,10,0,0"/>
+    <TextBlock Text="Uses your existing compiled BSP and zone_source CSV. Builds the loading fastfile when its CSV exists. Outputs go to usermaps/&lt;map name&gt;; previous files are backed up in the build logs." TextWrapping="Wrap" Foreground="#69736B" Margin="0,20,0,12"/>
+    <TextBlock Text="After a build, restart CoD4 to load the new archive, then run devmap with your map name." TextWrapping="Wrap" Foreground="#69736B"/>
+    <Button x:Name="OpenUsermap" Content="Open usermap folder" HorizontalAlignment="Right" Background="Transparent" Margin="0,12,0,0"/>
    </StackPanel></ScrollViewer></TabItem>
   </TabControl>
   <Border Grid.Row="3" BorderBrush="#DDE3D8" BorderThickness="0,1,0,0" Padding="0,14,0,0" Margin="0,18,0,0"><StackPanel><TextBlock x:Name="Status" Text="Ready. Choose your folders, then drop an image." TextWrapping="Wrap"/>
@@ -61,14 +75,16 @@ $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader
 $ui = @{}
 foreach ($name in @('Game','BrowseGame','Tabs','Folder','Browse','DropZone','ChooseImages','AutoTexture','Mask','Depth','Orientation','Resolution','Cell','Threshold','OpenFolder','MaterialName','TextureDrop','ChooseTexture','MeshFolder','BrowseMeshFolder','SF3DDrop','ChooseSF3D','MeshSize','MeshVertices','MeshTexture','Status','Results','CopyMaterial','OpenLogs')) { $ui[$name] = $window.FindName($name) }
 $ui.Game.Text = 'C:\Code\Cod4\Call of Duty 4'
+foreach ($name in @('BuildMap','BuildImages','BrowseBuildImages','BuildPackage','BundleOnly','OpenUsermap')) { $ui[$name]=$window.FindName($name) }
 $state = @{ Queue=New-Object System.Collections.Queue; Process=$null; Job=$null; Request=$null; Response=$null; Done=0; Failed=0; Material='' }
 function Save-Preferences {
  if ($SmokeTest) { return }
- try { @{game=$ui.Game.Text; folder=$ui.Folder.Text; mesh_folder=$ui.MeshFolder.Text; mesh_size=$ui.MeshSize.Text; mesh_vertices=$ui.MeshVertices.Text; mesh_texture=$ui.MeshTexture.SelectedIndex; auto_texture=[bool]$ui.AutoTexture.IsChecked; depth=$ui.Depth.Text; resolution=$ui.Resolution.Text; cell=$ui.Cell.Text; threshold=$ui.Threshold.Text; mask=$ui.Mask.SelectedIndex; orientation=$ui.Orientation.SelectedIndex} | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8 } catch { $ui.Status.Text='Could not remember settings.' }
+ # Build settings share the existing preferences file.
+ try { @{build_map=$ui.BuildMap.Text; build_images=$ui.BuildImages.Text; game=$ui.Game.Text; folder=$ui.Folder.Text; mesh_folder=$ui.MeshFolder.Text; mesh_size=$ui.MeshSize.Text; mesh_vertices=$ui.MeshVertices.Text; mesh_texture=$ui.MeshTexture.SelectedIndex; auto_texture=[bool]$ui.AutoTexture.IsChecked; depth=$ui.Depth.Text; resolution=$ui.Resolution.Text; cell=$ui.Cell.Text; threshold=$ui.Threshold.Text; mask=$ui.Mask.SelectedIndex; orientation=$ui.Orientation.SelectedIndex} | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8 } catch { $ui.Status.Text='Could not remember settings.' }
 }
 if ((Test-Path -LiteralPath $settingsFile) -and -not $SmokeTest) {
  try { $saved=Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
-  foreach ($pair in @(@('Game','game'),@('Folder','folder'),@('MeshFolder','mesh_folder'),@('MeshSize','mesh_size'),@('MeshVertices','mesh_vertices'),@('Depth','depth'),@('Resolution','resolution'),@('Cell','cell'),@('Threshold','threshold'))) { if ($null -ne $saved.($pair[1])) { $ui[$pair[0]].Text=[string]$saved.($pair[1]) } }
+  foreach ($pair in @(@('BuildMap','build_map'),@('BuildImages','build_images'),@('Game','game'),@('Folder','folder'),@('MeshFolder','mesh_folder'),@('MeshSize','mesh_size'),@('MeshVertices','mesh_vertices'),@('Depth','depth'),@('Resolution','resolution'),@('Cell','cell'),@('Threshold','threshold'))) { if ($null -ne $saved.($pair[1])) { $ui[$pair[0]].Text=[string]$saved.($pair[1]) } }
   if ($saved.mask -in 0,1,2) { $ui.Mask.SelectedIndex=$saved.mask }; if ($saved.orientation -in 0,1) { $ui.Orientation.SelectedIndex=$saved.orientation }; if ($null -ne $saved.auto_texture) { $ui.AutoTexture.IsChecked=[bool]$saved.auto_texture }
   if ($saved.mesh_texture -in 0,1,2) { $ui.MeshTexture.SelectedIndex=$saved.mesh_texture }
  } catch { }
@@ -77,6 +93,27 @@ function Pick-Folder($control) {
  $dialog=New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.SelectedPath=$control.Text
  try { if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $control.Text=$dialog.SelectedPath; Save-Preferences } } finally { $dialog.Dispose() }
 }
+function Refresh-BuildMaps {
+ $selected=$ui.BuildMap.Text; $ui.BuildMap.Items.Clear()
+ $path=Join-Path $ui.Game.Text 'raw\maps\mp'
+ if (Test-Path -LiteralPath $path) { Get-ChildItem -LiteralPath $path -Filter 'mp_*.d3dbsp' | Sort-Object LastWriteTime -Descending | ForEach-Object { [void]$ui.BuildMap.Items.Add($_.BaseName) } }
+ if ($selected) {$ui.BuildMap.Text=$selected} elseif ($ui.BuildMap.Items.Count) {$ui.BuildMap.SelectedIndex=0}
+ if (-not $ui.BuildImages.Text) {$ui.BuildImages.Text=Join-Path $ui.Game.Text 'raw\images'}
+}
+Refresh-BuildMaps
+$ui.Tabs.Add_SelectionChanged({param($sender,$eventArgs); if ($eventArgs.OriginalSource -eq $ui.Tabs -and $ui.Tabs.SelectedIndex -eq 3) {Refresh-BuildMaps}})
+$ui.BrowseBuildImages.Add_Click({Pick-Folder $ui.BuildImages})
+function Queue-Usermap([string]$action) {
+ try {
+  $name=$ui.BuildMap.Text.Trim()
+  if ($name -cnotmatch '^mp_[a-z0-9_]{1,60}$') {throw 'Choose a lowercase mp_ map name.'}
+  $state.Queue.Enqueue(@{kind='usermap';source=$name;map_name=$name;game=$ui.Game.Text.Trim();images_folder=$ui.BuildImages.Text.Trim();action=$action;language='english'})
+  $ui.Status.Text="Queued $action for $name. Fastfile builds may take several minutes; logs are saved below."
+ } catch {$ui.Status.Text=$_.Exception.Message}
+}
+$ui.BuildPackage.Add_Click({Queue-Usermap 'build'})
+$ui.BundleOnly.Add_Click({Queue-Usermap 'bundle'})
+$ui.OpenUsermap.Add_Click({$name=$ui.BuildMap.Text.Trim(); if ($name -cmatch '^mp_[a-z0-9_]{1,60}$') {$path=Join-Path $ui.Game.Text ('usermaps\'+$name); if (Test-Path -LiteralPath $path) {Start-Process explorer.exe -ArgumentList ('"'+$path+'"')}}})
 function Add-Images([string[]]$paths, [string]$kind='prefab') {
  try {
   $meshSize=$null; $meshVertices=$null
@@ -127,6 +164,7 @@ function Tick-Queue {
    if (-not $report.ok) { throw $report.error }
    $state.Material=[string]$report.result.material; $state.Done++
    $message=if ($state.Job.kind -eq 'texture') {"Imported $($state.Material) - reload textures in Radiant."} elseif ($state.Job.kind -eq 'sf3d') {"Saved $([IO.Path]::GetFileName($report.result.output)) - $($report.result.patches) mesh patches - $($state.Material)"} else {"Saved $([IO.Path]::GetFileName($report.result.output)) - $($report.result.brushes) brushes - $($state.Material)"}
+   if ($state.Job.kind -eq 'usermap') {$message=$report.result.message}
    [void]$ui.Results.Items.Insert(0,$message)
   } catch { $state.Failed++; [void]$ui.Results.Items.Insert(0,"Failed: $([IO.Path]::GetFileName($state.Job.source)) - $($_.Exception.Message)") }
   finally { foreach ($path in @($state.Request,$state.Response)) { if ([IO.File]::Exists($path)) { [IO.File]::Delete($path) } }; $state.Process.Dispose(); $state.Process=$null; $ui.Status.Text="$($state.Done) completed | $($state.Failed) failed | $($state.Queue.Count) queued" }
@@ -136,8 +174,8 @@ function Tick-Queue {
   try {
    $state.Job | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $state.Request -Encoding UTF8
    $start=New-Object Diagnostics.ProcessStartInfo; $start.FileName=$workerPython
-   $start.Arguments=(@((Join-Path $appRoot 'worker.py'),$state.Request,$state.Response) | ForEach-Object {'"'+$_+'"'}) -join ' '
-   $start.UseShellExecute=$false; $start.CreateNoWindow=$true; $start.EnvironmentVariables['PYTHONIOENCODING']='utf-8'
+   $start.Arguments=(@('-m','prefabdrop.worker',$state.Request,$state.Response) | ForEach-Object {'"'+$_+'"'}) -join ' '
+   $start.WorkingDirectory=$appRoot; $start.EnvironmentVariables['PYTHONPATH']=(Join-Path $appRoot 'src'); $start.UseShellExecute=$false; $start.CreateNoWindow=$true; $start.EnvironmentVariables['PYTHONIOENCODING']='utf-8'
    $state.Process=[Diagnostics.Process]::Start($start); $ui.Status.Text='Converting '+[IO.Path]::GetFileName($state.Job.source)+'...'
   } catch { $state.Process=$null; $state.Failed++; if ([IO.File]::Exists($state.Request)) { [IO.File]::Delete($state.Request) }; $ui.Status.Text=$_.Exception.Message }
  }

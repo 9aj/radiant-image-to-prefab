@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mesh import fitted_vertices, load_obj, map_text
+from prefabdrop.mesh import fitted_vertices, load_obj, map_text
 
 
 OBJ = '''
@@ -35,13 +35,24 @@ class MeshTests(unittest.TestCase):
     def test_patch_export_preserves_uvs(self):
         text = map_text(self.load(), 'pd_test', (512, 256), 256)
         self.assertEqual(2, text.count('\n  mesh\n'))
-        self.assertIn('t 0 256 0 0', text)
-        self.assertIn('t 512 0 0 0', text)
+        self.assertIn('t 0 256 ', text)
+        self.assertIn('t 512 0 ', text)
         self.assertTrue(text.startswith('iwmap 4\n"000_Global"'))
 
     def test_missing_uv_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'UV mapping'):
             self.load('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n')
+
+    def test_lightmap_has_area_for_each_face_orientation_even_with_constant_texture_uv(self):
+        for vertices in ('v 0 0 0\nv 1 0 0\nv 0 1 0',
+                         'v 0 0 0\nv 0 1 0\nv 0 0 1',
+                         'v 0 0 0\nv 1 0 0\nv 0 0 1'):
+            text = map_text(self.load(vertices + '\nvt 0 0\nf 1/1 2/1 3/1\n'), 'pd_test', (512, 512))
+            records = [line.split() for line in text.splitlines() if line.strip().startswith('v ')]
+            coords = [tuple(map(float, row[-2:])) for row in records]
+            a, b, c = coords[0], coords[2], coords[3]
+            self.assertGreater(abs((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0])), 0)
+            self.assertEqual(coords[0], coords[1])
 
 
 if __name__ == '__main__':

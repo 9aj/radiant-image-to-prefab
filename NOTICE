@@ -1,0 +1,8 @@
+Stable Fast 3D (optional, separately installed)
+This Stability AI Model is licensed under the Stability AI Community License, Copyright © Stability AI Ltd. All Rights Reserved
+
+Powered by Stability AI
+Upstream: https://github.com/Stability-AI/stable-fast-3d
+License: LICENSES/Stability-AI-Community-License.md (July 5, 2024)
+The upstream code and model weights are not bundled with this repository.
+The model license applies to Stability AI Materials; it does not relicense the application's independently written code.

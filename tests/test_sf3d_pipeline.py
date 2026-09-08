@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import sf3d_pipeline
+from prefabdrop import sf3d_pipeline
 
 
 OBJ = '''v 0 0 0

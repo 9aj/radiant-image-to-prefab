@@ -1,6 +1,6 @@
-param([string]$PythonVersion='3.11')
+﻿param([string]$PythonVersion='3.11')
 $ErrorActionPreference='Stop'
-$root=$PSScriptRoot
+$root=Split-Path -Parent $PSScriptRoot
 $repo=Join-Path $root 'tools\stable-fast-3d'
 $venv=Join-Path $root '.venv-sf3d'
 $vswhere=Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
