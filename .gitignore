@@ -4,3 +4,5 @@ __pycache__/
 preferences.json
 .prefabdrop/
 .venv-*/
+.venv-sf3d/
+tools/stable-fast-3d/

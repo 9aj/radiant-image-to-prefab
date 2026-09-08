@@ -6,10 +6,13 @@ import sys
 from PIL import Image
 from core import Settings, build, map_text
 from materials import import_material
+from sf3d_pipeline import generate as generate_3d
 
 
 def run(job):
     source = Path(job['source'])
+    if job['kind'] == 'sf3d':
+        return generate_3d(job, Path(__file__).parent)
     if job['kind'] == 'texture':
         return import_material(source, job['game'], job.get('name'))
     if job['kind'] != 'prefab':

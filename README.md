@@ -51,6 +51,21 @@ Set **CoD4 Mod Tools folder** to the installation containing `bin/converter.exe`
 
 The **Single texture** tab imports one image without creating geometry. Use **Copy material name**, reload textures or restart Radiant, and find the returned `pd_...` material under **Generic / floor**. No `textures/` prefix is used. The app does not control a running Radiant session.
 
+## Stable Fast 3D assets
+
+The **3D asset** tab turns a single object image into a textured mesh prefab. It runs Stable Fast 3D in a separate Python 3.11 environment, exports a self-contained GLB and a UV-mapped OBJ source bundle, converts its albedo into a CoD4 material, and writes each generated triangle as a Radiant mesh patch. Output is grounded at Z=0, centred in X/Y, and scaled to the requested longest edge.
+
+Stable Fast 3D is optional and its model is gated. First request access to [`stabilityai/stable-fast-3d`](https://huggingface.co/stabilityai/stable-fast-3d) and accept its licence. Install standard Windows Python 3.11 and Visual Studio 2022 with C++ build tools, then run:
+
+```powershell
+.\Setup-SF3D.ps1
+.\.venv-sf3d\Scripts\huggingface-cli.exe login
+```
+
+The setup clones the official repository into `tools/stable-fast-3d`, creates `.venv-sf3d`, detects the installed CUDA Toolkit, installs a matching CUDA PyTorch build, and compiles the upstream texture extensions. Model weights download on the first generation. The normal application continues using `.venv`; the environments are independent.
+
+Use an image with one clearly separated object. The default 1,500-vertex remesh is intended as a conservative Radiant starting point. Higher values produce one patch per generated triangle and can make Radiant or map compilation slow. The source GLB and OBJ bundle are retained beside the `.map` for inspection.
+
 Images become TGA sources with power-of-two dimensions from 32 to 1024 per axis. Alpha is flattened onto dark grey for the opaque material; PNG transparency can still define the geometry mask. This is source-image colour import, not generated normal/specular maps or reconstructed side artwork.
 
 Sources are saved in `texture_assets` and `source_data`; compiled assets are saved in `raw/materials`, `raw/images`, and `raw/material_properties`. Content-based names prevent collisions. Unchanged verified assets are reused. **Conversion logs** opens `.prefabdrop/logs`. Failure to compile prevents prefab output, while source files and logs remain for diagnosis.

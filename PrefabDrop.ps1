@@ -38,6 +38,17 @@ $workerPython = if (Test-Path -LiteralPath $venvPython) { $venvPython } elseif (
     <TextBlock Text="Creates an opaque metal material. Transparent pixels use a dark background. Images are resized to power-of-two dimensions, up to 1024 pixels per axis." Foreground="#69736B" TextWrapping="Wrap" Margin="0,18,0,12"/>
     <TextBlock Text="After import, reload textures or restart Radiant and search for the material name shown below." TextWrapping="Wrap" Foreground="#69736B"/>
    </StackPanel></TabItem>
+   <TabItem Header="3D asset"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,18,0,0">
+    <TextBlock Text="Stable Fast 3D" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="Turn one object image into a textured Radiant mesh prefab." TextWrapping="Wrap" Foreground="#69736B" Margin="0,7,0,20"/>
+    <TextBlock Text="3D PREFAB DESTINATION" FontSize="11" Foreground="#63755F" Margin="0,0,0,7"/><Grid Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox x:Name="MeshFolder" AutomationProperties.Name="3D prefab destination folder"/><Button x:Name="BrowseMeshFolder" Grid.Column="1" Content="Choose folder" Margin="10,0,0,0"/></Grid>
+    <Border x:Name="SF3DDrop" Background="#EAEFE5" BorderBrush="#BBCAB4" BorderThickness="1" CornerRadius="12" AllowDrop="True" Padding="27"><StackPanel HorizontalAlignment="Center"><TextBlock Text="⬡" Foreground="#758C68" FontSize="32" HorizontalAlignment="Center"/><TextBlock Text="Drop one object image" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,4,0,6"/><TextBlock Text="Generate a textured mesh and .map prefab" Foreground="#69736B" HorizontalAlignment="Center"/><Button x:Name="ChooseSF3D" Content="or choose an image" Margin="0,14,0,0" HorizontalAlignment="Center"/></StackPanel></Border>
+    <Grid Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <StackPanel><TextBlock Text="Longest edge · units" Margin="0,0,0,5"/><TextBox x:Name="MeshSize" Text="256"/></StackPanel>
+     <StackPanel Grid.Column="2"><TextBlock Text="Target vertices" Margin="0,0,0,5"/><TextBox x:Name="MeshVertices" Text="1500"/></StackPanel>
+     <StackPanel Grid.Column="4"><TextBlock Text="Texture" Margin="0,0,0,5"/><ComboBox x:Name="MeshTexture" SelectedIndex="1"><ComboBoxItem Content="512 px" Tag="512"/><ComboBoxItem Content="1024 px" Tag="1024"/><ComboBoxItem Content="2048 px" Tag="2048"/></ComboBox></StackPanel>
+    </Grid>
+    <TextBlock Text="The model runs locally in a separate Python environment. First use requires the Stable Fast 3D setup and approved Hugging Face model access." TextWrapping="Wrap" Foreground="#69736B" Margin="0,18,0,0"/>
+   </StackPanel></ScrollViewer></TabItem>
   </TabControl>
   <Border Grid.Row="3" BorderBrush="#DDE3D8" BorderThickness="0,1,0,0" Padding="0,14,0,0" Margin="0,18,0,0"><StackPanel><TextBlock x:Name="Status" Text="Ready. Choose your folders, then drop an image." TextWrapping="Wrap"/>
    <ListBox x:Name="Results" MaxHeight="90" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Margin="0,5"/></DataTemplate></ListBox.ItemTemplate></ListBox>
@@ -48,17 +59,18 @@ $workerPython = if (Test-Path -LiteralPath $venvPython) { $venvPython } elseif (
 '@
 $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $markup))
 $ui = @{}
-foreach ($name in @('Game','BrowseGame','Tabs','Folder','Browse','DropZone','ChooseImages','AutoTexture','Mask','Depth','Orientation','Resolution','Cell','Threshold','OpenFolder','MaterialName','TextureDrop','ChooseTexture','Status','Results','CopyMaterial','OpenLogs')) { $ui[$name] = $window.FindName($name) }
+foreach ($name in @('Game','BrowseGame','Tabs','Folder','Browse','DropZone','ChooseImages','AutoTexture','Mask','Depth','Orientation','Resolution','Cell','Threshold','OpenFolder','MaterialName','TextureDrop','ChooseTexture','MeshFolder','BrowseMeshFolder','SF3DDrop','ChooseSF3D','MeshSize','MeshVertices','MeshTexture','Status','Results','CopyMaterial','OpenLogs')) { $ui[$name] = $window.FindName($name) }
 $ui.Game.Text = 'C:\Code\Cod4\Call of Duty 4'
 $state = @{ Queue=New-Object System.Collections.Queue; Process=$null; Job=$null; Request=$null; Response=$null; Done=0; Failed=0; Material='' }
 function Save-Preferences {
  if ($SmokeTest) { return }
- try { @{game=$ui.Game.Text; folder=$ui.Folder.Text; auto_texture=[bool]$ui.AutoTexture.IsChecked; depth=$ui.Depth.Text; resolution=$ui.Resolution.Text; cell=$ui.Cell.Text; threshold=$ui.Threshold.Text; mask=$ui.Mask.SelectedIndex; orientation=$ui.Orientation.SelectedIndex} | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8 } catch { $ui.Status.Text='Could not remember settings.' }
+ try { @{game=$ui.Game.Text; folder=$ui.Folder.Text; mesh_folder=$ui.MeshFolder.Text; mesh_size=$ui.MeshSize.Text; mesh_vertices=$ui.MeshVertices.Text; mesh_texture=$ui.MeshTexture.SelectedIndex; auto_texture=[bool]$ui.AutoTexture.IsChecked; depth=$ui.Depth.Text; resolution=$ui.Resolution.Text; cell=$ui.Cell.Text; threshold=$ui.Threshold.Text; mask=$ui.Mask.SelectedIndex; orientation=$ui.Orientation.SelectedIndex} | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8 } catch { $ui.Status.Text='Could not remember settings.' }
 }
 if ((Test-Path -LiteralPath $settingsFile) -and -not $SmokeTest) {
  try { $saved=Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
-  foreach ($pair in @(@('Game','game'),@('Folder','folder'),@('Depth','depth'),@('Resolution','resolution'),@('Cell','cell'),@('Threshold','threshold'))) { if ($null -ne $saved.($pair[1])) { $ui[$pair[0]].Text=[string]$saved.($pair[1]) } }
+  foreach ($pair in @(@('Game','game'),@('Folder','folder'),@('MeshFolder','mesh_folder'),@('MeshSize','mesh_size'),@('MeshVertices','mesh_vertices'),@('Depth','depth'),@('Resolution','resolution'),@('Cell','cell'),@('Threshold','threshold'))) { if ($null -ne $saved.($pair[1])) { $ui[$pair[0]].Text=[string]$saved.($pair[1]) } }
   if ($saved.mask -in 0,1,2) { $ui.Mask.SelectedIndex=$saved.mask }; if ($saved.orientation -in 0,1) { $ui.Orientation.SelectedIndex=$saved.orientation }; if ($null -ne $saved.auto_texture) { $ui.AutoTexture.IsChecked=[bool]$saved.auto_texture }
+  if ($saved.mesh_texture -in 0,1,2) { $ui.MeshTexture.SelectedIndex=$saved.mesh_texture }
  } catch { }
 }
 function Pick-Folder($control) {
@@ -67,8 +79,9 @@ function Pick-Folder($control) {
 }
 function Add-Images([string[]]$paths, [string]$kind='prefab') {
  try {
-  if ($kind -eq 'texture' -and $paths.Count -ne 1) { throw 'Drop exactly one image in the Single texture tab.' }
-  $game=$ui.Game.Text.Trim().Trim('"'); $folder=$ui.Folder.Text.Trim().Trim('"')
+  $meshSize=$null; $meshVertices=$null
+  if ($kind -in 'texture','sf3d' -and $paths.Count -ne 1) { throw 'Drop exactly one image in this tab.' }
+  $game=$ui.Game.Text.Trim().Trim('"'); $folder=if ($kind -eq 'sf3d') {$ui.MeshFolder.Text.Trim().Trim('"')} else {$ui.Folder.Text.Trim().Trim('"')}
   if (($kind -eq 'texture' -or $ui.AutoTexture.IsChecked) -and -not (Test-Path -LiteralPath (Join-Path $game 'bin\converter.exe') -PathType Leaf)) { throw 'Choose the CoD4 folder containing bin\converter.exe.' }
   $settings=@{}
   if ($kind -eq 'prefab') {
@@ -80,10 +93,16 @@ function Add-Images([string[]]$paths, [string]$kind='prefab') {
    if ($resolution -lt 4 -or $resolution -gt 512 -or $threshold -lt 0 -or $threshold -gt 255) { throw 'Resolution must be 4–512; threshold must be 0–255.' }
    $settings=@{depth=$depth;cell=$cell;resolution=$resolution;threshold=$threshold;mode=[string]$ui.Mask.SelectedItem.Tag;orientation=[string]$ui.Orientation.SelectedItem.Tag}
   }
+  if ($kind -eq 'sf3d') {
+   if (-not (Test-Path -LiteralPath $folder -PathType Container)) { throw 'Choose an existing 3D prefab destination folder.' }
+   $culture=[Globalization.CultureInfo]::InvariantCulture; $meshSize=[double]::Parse($ui.MeshSize.Text,$culture); $meshVertices=[int]::Parse($ui.MeshVertices.Text,$culture)
+   if ([double]::IsNaN($meshSize) -or [double]::IsInfinity($meshSize) -or $meshSize -lt 1 -or $meshSize -gt 32768) { throw 'Longest edge must be 1–32768 units.' }
+   if ($meshVertices -lt 100 -or $meshVertices -gt 10000) { throw 'Target vertices must be 100–10000.' }
+  }
   foreach ($path in $paths) {
    if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or [IO.Path]::GetExtension($path).ToLowerInvariant() -notin '.png','.jpg','.jpeg','.webp','.bmp','.tif','.tiff') { throw 'Choose PNG, JPG, WEBP, BMP or TIFF images.' }
   }
-  foreach ($path in $paths) { $state.Queue.Enqueue(@{kind=$kind;source=$path;folder=$folder;game=$game;auto_texture=[bool]$ui.AutoTexture.IsChecked;settings=$settings;name=$ui.MaterialName.Text}) }
+  foreach ($path in $paths) { $state.Queue.Enqueue(@{kind=$kind;source=$path;folder=$folder;game=$game;auto_texture=[bool]$ui.AutoTexture.IsChecked;settings=$settings;name=$ui.MaterialName.Text;longest_edge=$meshSize;target_vertices=$meshVertices;texture_resolution=[int]$ui.MeshTexture.SelectedItem.Tag}) }
   Save-Preferences; $ui.Status.Text="$($paths.Count) image(s) queued."
  } catch { $ui.Status.Text=$_.Exception.Message }
 }
@@ -91,11 +110,11 @@ function Pick-Images([string]$kind) {
  $dialog=New-Object Microsoft.Win32.OpenFileDialog; $dialog.Multiselect=$kind -eq 'prefab'; $dialog.Filter='Images|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tif;*.tiff'
  if ($dialog.ShowDialog($window)) { Add-Images $dialog.FileNames $kind }
 }
-$ui.BrowseGame.Add_Click({ Pick-Folder $ui.Game }); $ui.Browse.Add_Click({ Pick-Folder $ui.Folder })
-$ui.ChooseImages.Add_Click({ Pick-Images 'prefab' }); $ui.ChooseTexture.Add_Click({ Pick-Images 'texture' })
-foreach ($zone in @($ui.DropZone,$ui.TextureDrop)) {
+$ui.BrowseGame.Add_Click({ Pick-Folder $ui.Game }); $ui.Browse.Add_Click({ Pick-Folder $ui.Folder }); $ui.BrowseMeshFolder.Add_Click({ Pick-Folder $ui.MeshFolder })
+$ui.ChooseImages.Add_Click({ Pick-Images 'prefab' }); $ui.ChooseTexture.Add_Click({ Pick-Images 'texture' }); $ui.ChooseSF3D.Add_Click({ Pick-Images 'sf3d' })
+foreach ($zone in @($ui.DropZone,$ui.TextureDrop,$ui.SF3DDrop)) {
  $zone.Add_PreviewDragOver({param($sender,$eventArgs); $eventArgs.Effects=if ($eventArgs.Data.GetDataPresent([Windows.DataFormats]::FileDrop)) {[Windows.DragDropEffects]::Copy} else {[Windows.DragDropEffects]::None}; $eventArgs.Handled=$true })
- $zone.Add_Drop({param($sender,$eventArgs); if ($eventArgs.Data.GetDataPresent([Windows.DataFormats]::FileDrop)) { $kind=if ($sender.Name -eq 'TextureDrop') {'texture'} else {'prefab'}; Add-Images $eventArgs.Data.GetData([Windows.DataFormats]::FileDrop) $kind }; $eventArgs.Handled=$true })
+ $zone.Add_Drop({param($sender,$eventArgs); if ($eventArgs.Data.GetDataPresent([Windows.DataFormats]::FileDrop)) { $kind=if ($sender.Name -eq 'TextureDrop') {'texture'} elseif ($sender.Name -eq 'SF3DDrop') {'sf3d'} else {'prefab'}; Add-Images $eventArgs.Data.GetData([Windows.DataFormats]::FileDrop) $kind }; $eventArgs.Handled=$true })
 }
 $ui.OpenFolder.Add_Click({if (Test-Path -LiteralPath $ui.Folder.Text -PathType Container) { Start-Process explorer.exe -ArgumentList ('"'+$ui.Folder.Text+'"') }})
 $ui.OpenLogs.Add_Click({$path=Join-Path $appRoot '.prefabdrop\logs'; if (Test-Path -LiteralPath $path) { Start-Process explorer.exe -ArgumentList ('"'+$path+'"') } else { $ui.Status.Text='No material conversions have run yet.' }})
@@ -107,7 +126,7 @@ function Tick-Queue {
    $report=Get-Content -LiteralPath $state.Response -Raw -Encoding UTF8 | ConvertFrom-Json
    if (-not $report.ok) { throw $report.error }
    $state.Material=[string]$report.result.material; $state.Done++
-   $message=if ($state.Job.kind -eq 'texture') {"Imported $($state.Material) - reload textures in Radiant."} else {"Saved $([IO.Path]::GetFileName($report.result.output)) - $($report.result.brushes) brushes - $($state.Material)"}
+   $message=if ($state.Job.kind -eq 'texture') {"Imported $($state.Material) - reload textures in Radiant."} elseif ($state.Job.kind -eq 'sf3d') {"Saved $([IO.Path]::GetFileName($report.result.output)) - $($report.result.patches) mesh patches - $($state.Material)"} else {"Saved $([IO.Path]::GetFileName($report.result.output)) - $($report.result.brushes) brushes - $($state.Material)"}
    [void]$ui.Results.Items.Insert(0,$message)
   } catch { $state.Failed++; [void]$ui.Results.Items.Insert(0,"Failed: $([IO.Path]::GetFileName($state.Job.source)) - $($_.Exception.Message)") }
   finally { foreach ($path in @($state.Request,$state.Response)) { if ([IO.File]::Exists($path)) { [IO.File]::Delete($path) } }; $state.Process.Dispose(); $state.Process=$null; $ui.Status.Text="$($state.Done) completed | $($state.Failed) failed | $($state.Queue.Count) queued" }
