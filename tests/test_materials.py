@@ -13,7 +13,7 @@ class MaterialTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         for folder in ('bin','deffiles','source_data','raw/materials','raw/images','raw/material_properties'):
             (self.root/folder).mkdir(parents=True)
         (self.root/'bin/converter.exe').touch()
