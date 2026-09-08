@@ -36,12 +36,14 @@ py -3.14 -m venv .venv
 
 - Resamples the image to a bounded grid and thresholds it into solid/empty cells.
 - Preserves holes and disconnected parts that survive that sampling.
-- Merges matching horizontal runs vertically, producing non-overlapping solid cuboids.
+- Chooses the smallest of four rectangle partitions: row-run and greedy rectangle merging in both image orientations. Coverage is exact and brushes do not overlap; the result never uses more brushes than the original row-run method.
 - Exports six-plane brushes in `iwmap 4`, in a worldspawn entity, without player spawns or lighting.
 - Rejects empty masks, invalid dimensions/material names, excessive brush counts, and geometry beyond the configured coordinate guardrail.
 - Processes images locally without uploads.
 
 This is a **grid-based extrusion MVP**. Diagonal and curved edges are stepped, not vector-traced or beveled. More resolution improves those edges but can create many small brushes. The brush limit is an application guardrail, not a statement of engine limits. Very thin features can disappear during sampling. There is no photo-to-3D reconstruction, heightmap interpretation, or patch export yet. The preview is illustrative, not a Radiant renderer.
+
+Rectangle optimization preserves every occupied cell and hole after sampling. It is a heuristic, not a guaranteed globally minimal partition. The tested Iron Man silhouette decreased from 84 to 64 brushes (23.8%) with identical coverage and the same shared texture projection.
 
 ## Custom materials
 
